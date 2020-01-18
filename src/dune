@@ -1,0 +1,6 @@
+(library
+ (name osh)
+ (public_name osh)
+ (kind ppx_rewriter)
+ (libraries core ppxlib)
+ (preprocess (pps ppxlib.metaquot)))

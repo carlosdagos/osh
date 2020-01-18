@@ -1,0 +1,18 @@
+opam-version: "1.2"
+maintainer: "YOUR EMAIL ADDRESS"
+authors: ["YOUR NAME"]
+homepage: "https://github.com/USERNAME/proj"
+bug-reports: "https://github.com/USERNAME/proj/issues"
+dev-repo: "https://github.com/USERNAME/proj.git"
+
+build: [
+  ["dune" "subst"] {pinned}
+  ["dune" "build" "-p" name "-j" jobs]
+]
+
+build-test: ["dune" "runtest" "-p" name]
+
+depends: [
+  "dune" {build}
+  "alcotest" {test}
+]
