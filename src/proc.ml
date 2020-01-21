@@ -1,64 +1,64 @@
 open Core
 
+type 'a t =
+  | P of (   input:UnixLabels.file_descr
+          -> output:UnixLabels.file_descr
+          -> error:UnixLabels.file_descr
+          -> 'a)
 
-type t = Unix.Process_info.t * char Stream.t
+let create_sys_process
+      ~program
+      ~args =
+  let prog = program in
+  let args = Array.of_list (List.cons program args) in
+  P begin fun ~input ~output ~error ->
+    let pid =
+      UnixLabels.create_process ~prog ~args
+        ~stdin:input
+        ~stdout:output
+        ~stderr:error
+    in
+    UnixLabels.waitpid ~mode:[] pid
+    end
 
 
-exception ExecutableNotFound of string
+let run_process (P p)
+      ?(input=UnixLabels.stdin)
+      ?(output=UnixLabels.stdout)
+      ?(error=UnixLabels.stderr)
+      () =
+  p ~input ~output ~error
 
 
-let executable_paths () =
-  let open Sys in
-  String.split_on_chars (getenv_exn "PATH") ~on:[':']
-  |> begin fun ps ->
-     List.filter ps ~f:begin fun path ->
-       match is_directory ~follow_symlinks:true path with
-       | `Yes -> true
-       | _    -> false
-       end
-     end
+let run_process' p =
+  ignore(run_process p ())
 
 
-let find_all_executables exe =
-  let open Sys in
-  let searchdirs = executable_paths ()
-  in
-  List.filter searchdirs ~f:begin fun dir ->
-    let exe_full_name = dir ^ "/" ^ exe in
-    match file_exists ~follow_symlinks:true exe_full_name with
-    | `Yes -> true
-    | _    -> false
+let with_pipe f =
+  let (r, w) = UnixLabels.pipe () in
+  f ~read:r ~write:w
+
+
+let pipe (P p1) (P p2) =
+  with_pipe begin fun ~read ~write ->
+    P begin fun ~input ~output ~error ->
+        let a = Fun.protect
+                  ~finally:(fun _ -> UnixLabels.close write)
+                  (fun _ ->
+                    p1 ~input ~output:write ~error)
+        in
+        let b = Fun.protect
+                  ~finally:(fun _ -> UnixLabels.close read)
+                  (fun _ ->
+                    p2 ~input:read ~output ~error)
+        in
+        a, b
+      end
   end
 
 
-let find_executable exe =
-  match List.hd (find_all_executables exe) with
-  | Some p -> p
-  | None -> raise (ExecutableNotFound exe)
-
-
-let create_process_stream ~prog ~args =
-  let proc_info = Unix.create_process ~prog ~args in
-  let stdout_chan = Unix.in_channel_of_descr proc_info.stdout in
-  proc_info, Stream.of_channel stdout_chan
-
-
-let () =
-  let open Ppxlib in
-  (* This is our expand function. For a given list of
-     programs, it will create a `let` expression that
-     calls our executable program. *)
-  let expand_fn ~loc ~path programs =
-    ignore (path, programs);
-    [%expr 1 + 1]
-  in
-  let extension =
-    Extension.declare
-      "osh_progs"
-      Extension.Context.expression
-      Ast_pattern.(single_expr_payload (elist (estring __)))
-      expand_fn in
-  let rule =
-    Context_free.Rule.extension extension
-  in
-  Driver.register_transformation ~rules:[rule] "osh_transformation"
+let ( ||> ) p1 p2 =
+  P begin fun ~input ~output ~error ->
+      let (_, r) = run_process (pipe p1 p2) ~input ~output ~error () in
+      r
+    end

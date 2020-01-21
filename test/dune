@@ -15,4 +15,5 @@
 (test
  (name test)
  (modules test)
+ (libraries osh)
  (preprocess (pps osh)))
