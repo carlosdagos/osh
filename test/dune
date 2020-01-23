@@ -12,8 +12,9 @@
  (name runtest)
  (action (diff test.expected.ml test.actual.ml)))
 
-(test
+(library
  (name test)
  (modules test)
+ (inline_tests)
  (libraries osh)
- (preprocess (pps osh)))
+ (preprocess (pps osh ppx_expect)))
