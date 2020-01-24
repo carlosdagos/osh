@@ -1,11 +1,13 @@
+[%%osh_def ["cat"; "awk"; "grep"]]
+
+
 let%osh_script my_script =
       echo ["hello world"]
   ||> grep ["hello"]
   ||> awk  ["{print $1}"]
 
 
-let message = "hello_world"
-let%osh_script hello_world_script =
+let%osh_script hello_world_script ?(message="hello_world") () =
   echo [message]
 
 
@@ -13,11 +15,6 @@ let%osh_script my_ip =
       ip ["route"; "get"; "8.8.8.8"]
   ||> awk ["/src / {print $7}"]
 
-
-let%osh_script will_this_ever_work =
-      cat ["/dev/urandom"]
-  ||> base64 []
-  ||> head ["-n"; "5"]
 
 let%expect_test _ =
   let open Osh.Proc in
@@ -27,10 +24,9 @@ let%expect_test _ =
   in
 
   run_process' inline_script;
-  run_process' hello_world_script;
+  run_process' (hello_world_script ());
   run_process' my_script;
   run_process' my_ip;
-  run_process' will_this_ever_work;
 
   [%expect{|
   hello world

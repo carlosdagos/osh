@@ -1,3 +1,4 @@
+open Core
 open Ppxlib
 
 module E = struct
@@ -76,29 +77,40 @@ module E = struct
     | [%expr (    ([%e? pn1] [%e? pargs1])
               ||> ([%e? pn2] [%e? pargs2])
               ||> [%e? cont])] ->
-       let prog_name1 = mk_prog_name pn1 ~loc in
-       let prog_name2 = mk_prog_name pn2 ~loc in
+       let prog_name1 = mk_prog_name pn1 ~loc:code.pexp_loc in
+       let prog_name2 = mk_prog_name pn2 ~loc:code.pexp_loc in
        [%expr
            create_sys_process ~program:[%e prog_name1] ~args:[%e pargs1]
        ||> create_sys_process ~program:[%e prog_name2] ~args:[%e pargs2]
-       ||> [%e code_transform ~loc cont]
+       ||> [%e code_transform ~loc:code.pexp_loc cont]
        ]
     (* If we're at the end of a chain *)
     | [%expr (    ([%e? pn1] [%e? pargs1])
               ||> ([%e? pn2] [%e? pargs2]))] ->
-       let prog_name1 = mk_prog_name pn1 ~loc in
-       let prog_name2 = mk_prog_name pn2 ~loc in
+       let prog_name1 = mk_prog_name pn1 ~loc:code.pexp_loc in
+       let prog_name2 = mk_prog_name pn2 ~loc:code.pexp_loc in
        [%expr
            create_sys_process ~program:[%e prog_name1] ~args:[%e pargs1]
        ||> create_sys_process ~program:[%e prog_name2] ~args:[%e pargs2]]
     (* If we just have a single program *)
     | [%expr ([%e? pn] [%e? prog_args])] ->
-       let prog_name = mk_prog_name pn ~loc
+       let prog_name = mk_prog_name pn ~loc:code.pexp_loc
        in
        [%expr
            create_sys_process ~program:[%e prog_name] ~args:[%e prog_args]
        ]
-    | e -> e
+    | e ->
+       match e.pexp_desc with
+       (* We just got a function definition, so we want to keep it all,
+          but just rewrite the expression body *)
+       | Pexp_fun(a, b, c, code) ->
+          { e with
+            pexp_desc =
+              Pexp_fun(a, b, c, code_transform ~loc:code.pexp_loc code)
+          }
+       | _ ->
+          Location.raise_errorf ~loc
+            "Osh does not support thiskind of expression"
 
 
   let expand_osh_script ~loc ~path:_ uncaught_exn ~name ~tags code =
@@ -118,6 +130,17 @@ module E = struct
        ]
 
 
+  let expand_osh_def ~loc ~path:_ programs =
+    List.map programs ~f:(fun program ->
+        let pname = Ast_builder.Default.estring ~loc program in
+        [%stri let foo =
+           fun args -> Osh.Proc.create_sys_process
+                         ~program:[%e pname]
+                         ~args:args
+        ]
+      )
+
+
   let expand_osh_prog ~loc ~path:_ program =
     let pname = Ast_builder.Default.estring ~loc program in
     [%expr
@@ -134,13 +157,22 @@ module E = struct
       expand_osh_script
 
 
+  let osh_def =
+    Extension.declare_inline "osh_def"
+      Extension.Context.structure_item
+      Ast_pattern.(single_expr_payload (elist (estring __)))
+      expand_osh_def
+
+
   let osh =
     Extension.declare "osh"
       Extension.Context.expression
       Ast_pattern.(single_expr_payload (estring __))
       expand_osh_prog
 
-  let all_rules = List.map Context_free.Rule.extension [ osh; osh_script ]
+  let all_rules =
+    List.map ~f:Context_free.Rule.extension
+      [ osh; osh_def; osh_script ]
 end
 
 let () =
