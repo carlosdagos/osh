@@ -1,12 +1,10 @@
 open Core
 
-
 type 'a t =
   | P of (   input:UnixLabels.file_descr
           -> output:UnixLabels.file_descr
           -> error:UnixLabels.file_descr
           -> 'a)
-
 
 let identity : 'a t -> 'a t = Fun.id
 

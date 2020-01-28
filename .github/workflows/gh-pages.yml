@@ -1,0 +1,23 @@
+name: gh-pages
+on:
+  push:
+    branches: [master]
+
+jobs:
+  build-docs:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@master
+    - uses: avsm/setup-ocaml@master
+      with:
+        ocaml-version: '4.09.0'
+    - run: opam install -t . --deps-only
+    - run: opam install -y odoc
+    - run: opam exec -- dune build
+    - run: opam exec -- dune build @doc
+    - uses: peaceiris/actions-gh-pages@v2
+      name: Deploy gh-pages
+      env:
+        PERSONAL_TOKEN: ${{ secrets.PERSONAL_TOKEN }}
+        PUBLISH_BRANCH: gh-pages
+        PUBLISH_DIR: ./_build/default/_doc/_html/osh

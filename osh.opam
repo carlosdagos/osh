@@ -1,9 +1,9 @@
 opam-version: "1.2"
-maintainer: "YOUR EMAIL ADDRESS"
-authors: ["YOUR NAME"]
-homepage: "https://github.com/USERNAME/proj"
-bug-reports: "https://github.com/USERNAME/proj/issues"
-dev-repo: "https://github.com/USERNAME/proj.git"
+maintainer: "m@cdagostino.io"
+authors: ["Carlos D."]
+homepage: "https://github.com/carlosdagos/osh"
+bug-reports: "https://github.com/carlosdagos/osh/issues"
+dev-repo: "https://github.com/carlosdagos/osh.git"
 
 build: [
   ["dune" "subst"] {pinned}
@@ -14,5 +14,8 @@ build-test: ["dune" "runtest" "-p" name]
 
 depends: [
   "dune" {build}
-  "alcotest" {test}
+  "ocaml" {>= "4.08.0"}
+  "core" {>= "v0.13.0"}
+  "logs" {>= "0.7.0"}
+  "ppxlib" {>= "0.10.0"}
 ]

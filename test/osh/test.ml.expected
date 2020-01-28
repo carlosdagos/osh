@@ -1,0 +1,10 @@
+[%%expect_test
+  let _ =
+    let open Osh.Proc in
+      let message = "Hello Osh!" in
+      let echo args = Osh.Proc.create_sys_process ~program:"echo" ~args in
+      let cat args = Osh.Proc.create_sys_process ~program:"cat" ~args in
+      let inline_script = (echo [message]) ||> (cat []) in
+      run_process' inline_script; [%expect {|
+  Hello Osh!
+  |}]]

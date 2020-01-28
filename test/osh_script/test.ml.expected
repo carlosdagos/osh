@@ -1,0 +1,26 @@
+let cat args = Osh.Proc.create_sys_process ~program:"cat" ~args
+let awk args = Osh.Proc.create_sys_process ~program:"awk" ~args
+let grep args = Osh.Proc.create_sys_process ~program:"grep" ~args
+let echo args = Osh.Proc.create_sys_process ~program:"echo" ~args
+let my_script =
+  let open Osh.Proc in
+    Osh.Proc.identity
+      (((echo ["Hello World!"]) ||> (grep ["hello"; "-i"])) ||>
+         (awk ["{print $1}"]))
+let hello_world_script =
+  let open Osh.Proc in
+    fun ?(message= "hello_world") ->
+      fun () ->
+        Osh.Proc.identity
+          (let message = message ^ " appended" in
+           let echo = echo [message] in echo)
+[%%expect_test
+  let _ =
+    let open Osh.Proc in
+      let message = "Hello Osh!" in
+      run_process' my_script;
+      run_process' (hello_world_script ~message ());
+      [%expect {|
+  Hello
+  Hello Osh! appended
+  |}]]

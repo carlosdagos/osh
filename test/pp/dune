@@ -1,0 +1,4 @@
+(executable
+ (name pp)
+ (modules pp)
+ (libraries osh.ppx ppxlib))

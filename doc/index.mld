@@ -1,0 +1,144 @@
+{0:top Osh (OCaml Shell)}
+
+[Osh] is an OCaml library that allows shell-like scripting
+in OCaml programs.
+
+{i NOTE: This library is still experimental. The API is not guaranteed
+to be stable.}
+
+{1:installing Installing}
+
+{2:install-source Source code}
+
+The source code for [Osh] can be found in the following link:
+
+{{:https://github.com/carlosdagos/osh}}
+
+{2:install-opam Using opam}
+
+You can install [Osh] using [opam] by following the instructions below:
+
+{v
+opam pin add osh https://github.com/carlosdagos/osh.git
+opam install osh
+v}
+
+{1:fundamentals Fundamentals}
+
+[Osh] allows OCaml programmers to define system programs and use
+certain combinators to build more complex ones.
+
+The main entrypoint to run programs is the [run_process] function.
+
+The runtime module can be found in {!Osh.Proc}.
+
+{1:usage Usage}
+
+There's three basic ways to use [Osh]
+
+{2:osh-basic Using the runtime directly}
+
+Once installed you can add the library to your [dune] file.
+
+{[
+(executable
+ (name my-executable)
+ (modules main)
+ (libraries osh))
+]}
+
+You can then use the runtime directly:
+
+{[
+open Osh.Proc
+
+let _ =
+  let echo args = create_system_process ~program:"echo" ~args in
+  run_process' (echo ["Hello world!"])
+]}
+
+{2:osh-ppx Using the Osh PPX}
+
+The code above is fine but can turn out to be quite vebose.
+
+Osh comes with an Preprocessor Extension that you can use to avoid
+having to spell out everything.
+
+Start out by adding the [preprocess] stanza to your [dune] file:
+
+{[
+(executable
+ (name my-executable)
+ (modules main)
+ (libraries osh)
+ (preprocess (pps osh.ppx)))
+]}
+
+{3:osh-ppx-basic Basic expressions}
+
+You may now create {!Osh.Proc.t} expressions using simple PPX:
+
+{[
+open Osh.Proc
+
+let echo = [%osh "echo"]
+let cat  = [%osh "cat"]
+
+let _ =
+  run_process' (echo ["Hello world!"] ||> cat [])
+]}
+
+{3:osh-def-multiple Defining multiple [Osh] proc}
+
+The above might still be cumbersome if you wish to use many
+programs. You may instead with to use the [osh_def] extension:
+
+{[
+open Osh.Proc
+
+[%%osh_def ["echo"; "cat"]]
+
+let _ =
+  run_process' (echo ["Hello world!"] ||> cat [])
+]}
+
+{3:osh-scripts Defining scripts}
+
+Lastly, if you wish to port complex programs using [Osh], you might want to define your functions using the structure extension provided by this library.
+
+{[
+[%%osh_def ["ip"]]
+
+let%osh_script ip_route ?(get_ip="8.8.8.8") () =
+  ip ["route"; "get"; get_ip]
+
+let _ =
+  let open Osh.Proc in
+  run_process' (ip_route ())
+  run_process' (ip_route ~get_ip:"10.0.0.1" ())
+]}
+
+{1:acknowledgements Acknowledgements}
+
+[Osh] is based on the following Haskell projects:
+
+- {{:https://github.com/luke-clifton/shh}}
+- {{:https://github.com/kowainik/shellmet}}
+
+{1:bugs Current limitations}
+
+[Osh] does not use any async runtime under the hood. This means
+that the following script will never finish:
+
+{[
+let%osh_script will_never_finish =
+   cat ["/dev/urandom"] ||> head ["-n", "5"]
+]}
+
+Support for this will be added in future versions.
+
+{1:bugs Bugs}
+
+Please file any issues encountered in the link below:
+
+{{:https://github.com/carlosdagos/osh/issues}}

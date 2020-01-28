@@ -1,0 +1,16 @@
+(rule
+ (targets test.ml.actual)
+ (deps (:input test.ml))
+ (action (run %{project_root}/test/pp/pp.exe --impl %{input} -o %{targets})))
+
+(alias
+ (name runtest)
+ (deps (:test test.ml))
+ (action (diff %{test}.actual %{test}.expected)))
+
+(library
+ (name test_osh_script)
+ (modules test)
+ (inline_tests)
+ (libraries osh)
+ (preprocess (pps osh.ppx ppx_expect)))
