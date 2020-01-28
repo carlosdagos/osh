@@ -60,57 +60,16 @@ module E = struct
 
 
   let rec code_transform ~loc code =
-    let mk_prog_name p ~loc =
-      match p.pexp_desc with
-      | Pexp_ident { txt = Lident t; _ } ->
-         Ast_builder.Default.estring ~loc t
-      | _ -> Location.raise_errorf ~loc "Need a label here"
-    in
-    match code with
-    (* If it's a `let` expression *)
-    | [%expr let [%p? p] = [%e? exp1] in [%e? exp2]] ->
-       [%expr
-        let [%p p] = [%e code_transform ~loc exp1] in
-        [%e code_transform ~loc exp2]
-       ]
-    (* If it's a daisy chain *)
-    | [%expr (    ([%e? pn1] [%e? pargs1])
-              ||> ([%e? pn2] [%e? pargs2])
-              ||> [%e? cont])] ->
-       let prog_name1 = mk_prog_name pn1 ~loc:code.pexp_loc in
-       let prog_name2 = mk_prog_name pn2 ~loc:code.pexp_loc in
-       [%expr
-           create_sys_process ~program:[%e prog_name1] ~args:[%e pargs1]
-       ||> create_sys_process ~program:[%e prog_name2] ~args:[%e pargs2]
-       ||> [%e code_transform ~loc:code.pexp_loc cont]
-       ]
-    (* If we're at the end of a chain *)
-    | [%expr (    ([%e? pn1] [%e? pargs1])
-              ||> ([%e? pn2] [%e? pargs2]))] ->
-       let prog_name1 = mk_prog_name pn1 ~loc:code.pexp_loc in
-       let prog_name2 = mk_prog_name pn2 ~loc:code.pexp_loc in
-       [%expr
-           create_sys_process ~program:[%e prog_name1] ~args:[%e pargs1]
-       ||> create_sys_process ~program:[%e prog_name2] ~args:[%e pargs2]]
-    (* If we just have a single program *)
-    | [%expr ([%e? pn] [%e? prog_args])] ->
-       let prog_name = mk_prog_name pn ~loc:code.pexp_loc
-       in
-       [%expr
-           create_sys_process ~program:[%e prog_name] ~args:[%e prog_args]
-       ]
-    | e ->
-       match e.pexp_desc with
-       (* We just got a function definition, so we want to keep it all,
+    match code.pexp_desc with
+    (* We just got a function definition, so we want to keep it all,
           but just rewrite the expression body *)
-       | Pexp_fun(a, b, c, code) ->
-          { e with
-            pexp_desc =
-              Pexp_fun(a, b, c, code_transform ~loc:code.pexp_loc code)
-          }
-       | _ ->
-          Location.raise_errorf ~loc
-            "Osh does not support thiskind of expression"
+    | Pexp_fun(a, b, c, code) ->
+       { code with
+         pexp_desc =
+           Pexp_fun(a, b, c, code_transform ~loc:code.pexp_loc code)
+       }
+    | _ ->
+       [%expr Osh.Proc.identity [%e code]]
 
 
   let expand_osh_script ~loc ~path:_ uncaught_exn ~name ~tags code =
@@ -133,7 +92,8 @@ module E = struct
   let expand_osh_def ~loc ~path:_ programs =
     List.map programs ~f:(fun program ->
         let pname = Ast_builder.Default.estring ~loc program in
-        [%stri let foo =
+        let pvar = Ast_builder.Default.pvar ~loc program in
+        [%stri let [%p pvar] =
            fun args -> Osh.Proc.create_sys_process
                          ~program:[%e pname]
                          ~args:args

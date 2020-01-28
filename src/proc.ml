@@ -7,6 +7,10 @@ type 'a t =
           -> error:UnixLabels.file_descr
           -> 'a)
 
+
+let identity : 'a t -> 'a t = Fun.id
+
+
 let create_sys_process
       ~program
       ~args =

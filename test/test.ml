@@ -1,4 +1,4 @@
-[%%osh_def ["cat"; "awk"; "grep"]]
+[%%osh_def ["cat"; "awk"; "grep"; "echo"; "ip"]]
 
 
 let%osh_script my_script =
@@ -8,7 +8,9 @@ let%osh_script my_script =
 
 
 let%osh_script hello_world_script ?(message="hello_world") () =
-  echo [message]
+  let message = message ^ "trololol" in
+  let echo = echo [message] in
+  echo
 
 
 let%osh_script my_ip =
