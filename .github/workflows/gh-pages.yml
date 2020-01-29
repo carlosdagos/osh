@@ -20,4 +20,4 @@ jobs:
       env:
         PERSONAL_TOKEN: ${{ secrets.PERSONAL_TOKEN }}
         PUBLISH_BRANCH: gh-pages
-        PUBLISH_DIR: ./_build/default/_doc/_html/osh
+        PUBLISH_DIR: ./_build/default/_doc/_html

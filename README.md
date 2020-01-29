@@ -21,7 +21,7 @@ interface.
 Documentation
 -------------
 
-Please see the documentation here: https://carlosdagos.github.io/osh
+Please see the documentation here: [https://carlosdagos.github.io/osh](https://carlosdagos.github.io/osh/osh/index.html)
 
 Developing
 ----------
